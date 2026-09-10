@@ -1,0 +1,25 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+.env
+
+# ML Models (use S3 or git-lfs instead)
+*.pkl
+*.pt
+*.h5
+
+# Jupyter
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# Expo / Node
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/.env
+
+# VS Code
+.vscode/
