@@ -34,12 +34,15 @@ class Settings(BaseSettings):
     NEWS_API_KEY: Optional[str] = None
 
     # ------------------------------------------------------------------
-    # LLM / AI Chatbot
+    # LLM / AI Chatbot (Gemini Primary + Ollama Fallback)
     # ------------------------------------------------------------------
-    OPENAI_API_KEY: Optional[str] = None
+    # Google Gemini API key (https://aistudio.google.com/app/apikey)
+    GEMINI_API_KEY: Optional[str] = None
+    GEMINI_MODEL: str = "gemini-1.5-flash"
 
-    # LLM_PROVIDER options: "openai", "gemini", "anthropic", "ollama", "mock"
-    LLM_PROVIDER: str = "mock"
+    # Ollama Local LLM Fallback (http://localhost:11434)
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "llama3"
 
     # ------------------------------------------------------------------
     # Speech (STT / TTS)
