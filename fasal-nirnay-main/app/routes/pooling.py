@@ -1,62 +1,45 @@
+"""
+Virtual Pooling Routes — FasalNirnay AI
+=======================================
+Exposes HTTP endpoints for auto-pooling and mandi profit optimization.
+"""
+
+from typing import List, Optional
 from fastapi import APIRouter, HTTPException
+
+from app.models.schemas import PoolRequest, PoolResponse, Farmer
 from app.services.virtual_pooling.pool_engine import create_auto_pools
 from app.services.virtual_pooling.optimizer import optimize_pool
 from app.services.prediction import get_mandi_predictions
-from pydantic import BaseModel
-from typing import List, Optional
 
 router = APIRouter(prefix="/pool", tags=["Virtual Pooling"])
 
 
 # ─────────────────────────────────────────────
-# REQUEST MODELS
-# ─────────────────────────────────────────────
-class Farmer(BaseModel):
-    farmer_id: int
-    quantity:  float       # quintals
-    location:  str         # village / city — geocoded via OpenCage
-    crop:      str         # e.g. "wheat", "mustard"
-
-
-class PoolRequest(BaseModel):
-    farmers:       List[Farmer]
-    price_history: Optional[List[float]] = None
-    # Optional: last N days of prices (₹/quintal) for the crop.
-    # If provided, passed to LSTM for better price forecasting.
-    # e.g. [2050.0, 2080.0, 2095.0, 2110.0]
-
-
-# ─────────────────────────────────────────────
 # MAIN API
 # ─────────────────────────────────────────────
-@router.post("/")
+@router.post("/", response_model=PoolResponse)
 def pool_and_optimize(data: PoolRequest):
     """
     POST /pool/
 
     Step 1 — Group farmers by crop, cluster within 10 km radius.
-             Farmers >10 km apart in the same crop = separate pools.
+             Farmers >10 km apart in the same crop form separate pools.
 
     Step 2 — For each pool:
-             a. Run price model (XGB + LGB + LSTM meta stack) per mandi.
-             b. Run grade model (LGB classifier) per mandi.
+             a. Run price model stack per mandi.
+             b. Run grade model classifier per mandi.
              c. Compute net profit:
                     effective_price = predicted_price × grade_multiplier
                     net_price       = effective_price − transport_cost/q
              d. Return the mandi with the highest net_price.
-
-    Request body:
-        {
-            "farmers": [
-                { "farmer_id": 1, "quantity": 50, "location": "Jhajjar", "crop": "wheat" },
-                { "farmer_id": 2, "quantity": 80, "location": "Rohtak",  "crop": "wheat" }
-            ],
-            "price_history": [2050, 2060, 2080]   // optional, last N days
-        }
     """
     try:
-        farmers_list  = [f.dict() for f in data.farmers]
-        price_history = data.price_history  # may be None
+        farmers_list = [
+            f.model_dump() if hasattr(f, "model_dump") else f.dict()
+            for f in data.farmers
+        ]
+        price_history = data.price_history
 
         # ── Step 1: build geo-clustered pools ────────────────────────
         pools = create_auto_pools(farmers_list)
@@ -64,7 +47,7 @@ def pool_and_optimize(data: PoolRequest):
         if not pools:
             raise ValueError(
                 "No valid pools could be created. "
-                "Ensure at least two farmers with the same crop are within 10 km."
+                "Ensure at least one valid farmer group is provided within geographic bounds."
             )
 
         # ── Step 2: predict + optimize each pool ─────────────────────
@@ -73,8 +56,16 @@ def pool_and_optimize(data: PoolRequest):
         for pool in pools:
             crop = pool["crop"]
 
-            # Get per-mandi price + grade predictions from the ML models
-            mandi_data = get_mandi_predictions(crop, price_history)
+            # Get per-mandi price + grade predictions from the ML models / baseline
+            try:
+                mandi_data = get_mandi_predictions(crop, price_history)
+            except Exception as pred_err:
+                results.append({
+                    "pool_id": pool["pool_id"],
+                    "crop":    crop,
+                    "error":   f"Prediction error for crop {crop}: {str(pred_err)}",
+                })
+                continue
 
             if not mandi_data:
                 results.append({
@@ -84,7 +75,7 @@ def pool_and_optimize(data: PoolRequest):
                 })
                 continue
 
-            # Run optimizer: applies grade multiplier + transport cost equation
+            # Run optimizer: applies grade multiplier + truck transport cost equation
             result = optimize_pool(pool, mandi_data)
             results.append(result)
 
@@ -99,3 +90,4 @@ def pool_and_optimize(data: PoolRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+

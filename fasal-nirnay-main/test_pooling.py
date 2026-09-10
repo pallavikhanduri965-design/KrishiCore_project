@@ -14,12 +14,13 @@ from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 from fastapi import FastAPI
 
-from app.api.routes.pooling import router
+from app.routes.pooling import router
 
 # ---- Build a minimal app just for testing ----
 app = FastAPI()
 app.include_router(router)
 client = TestClient(app)
+
 
 
 # ============================================================
@@ -84,9 +85,9 @@ MOCK_OPTIMIZE_RESULT = {
 
 class TestPoolRouteHappyPath:
 
-    @patch("app.api.routes.pooling.create_auto_pools")
-    @patch("app.api.routes.pooling.optimize_pool")
-    @patch("app.api.routes.pooling.get_mandi_predictions")
+    @patch("app.routes.pooling.create_auto_pools")
+    @patch("app.routes.pooling.optimize_pool")
+    @patch("app.routes.pooling.get_mandi_predictions")
     def test_success_returns_200(self, mock_mandi, mock_optimize, mock_pools):
         mock_pools.return_value    = [MOCK_POOL]
         mock_mandi.return_value    = MOCK_MANDI_DATA
@@ -96,9 +97,9 @@ class TestPoolRouteHappyPath:
 
         assert response.status_code == 200
 
-    @patch("app.api.routes.pooling.create_auto_pools")
-    @patch("app.api.routes.pooling.optimize_pool")
-    @patch("app.api.routes.pooling.get_mandi_predictions")
+    @patch("app.routes.pooling.create_auto_pools")
+    @patch("app.routes.pooling.optimize_pool")
+    @patch("app.routes.pooling.get_mandi_predictions")
     def test_response_has_status_success(self, mock_mandi, mock_optimize, mock_pools):
         mock_pools.return_value    = [MOCK_POOL]
         mock_mandi.return_value    = MOCK_MANDI_DATA
@@ -109,9 +110,9 @@ class TestPoolRouteHappyPath:
 
         assert data["status"] == "success"
 
-    @patch("app.api.routes.pooling.create_auto_pools")
-    @patch("app.api.routes.pooling.optimize_pool")
-    @patch("app.api.routes.pooling.get_mandi_predictions")
+    @patch("app.routes.pooling.create_auto_pools")
+    @patch("app.routes.pooling.optimize_pool")
+    @patch("app.routes.pooling.get_mandi_predictions")
     def test_response_has_pools_list(self, mock_mandi, mock_optimize, mock_pools):
         mock_pools.return_value    = [MOCK_POOL]
         mock_mandi.return_value    = MOCK_MANDI_DATA
@@ -124,9 +125,9 @@ class TestPoolRouteHappyPath:
         assert isinstance(data["pools"], list)
         assert len(data["pools"]) == 1
 
-    @patch("app.api.routes.pooling.create_auto_pools")
-    @patch("app.api.routes.pooling.optimize_pool")
-    @patch("app.api.routes.pooling.get_mandi_predictions")
+    @patch("app.routes.pooling.create_auto_pools")
+    @patch("app.routes.pooling.optimize_pool")
+    @patch("app.routes.pooling.get_mandi_predictions")
     def test_total_pools_count_correct(self, mock_mandi, mock_optimize, mock_pools):
         mock_pools.return_value    = [MOCK_POOL]
         mock_mandi.return_value    = MOCK_MANDI_DATA
@@ -137,9 +138,9 @@ class TestPoolRouteHappyPath:
 
         assert data["total_pools"] == 1
 
-    @patch("app.api.routes.pooling.create_auto_pools")
-    @patch("app.api.routes.pooling.optimize_pool")
-    @patch("app.api.routes.pooling.get_mandi_predictions")
+    @patch("app.routes.pooling.create_auto_pools")
+    @patch("app.routes.pooling.optimize_pool")
+    @patch("app.routes.pooling.get_mandi_predictions")
     def test_multi_pool_response(self, mock_mandi, mock_optimize, mock_pools):
         pool2 = {**MOCK_POOL, "pool_id": "POOL-TEST02", "crop": "mustard"}
         mock_pools.return_value    = [MOCK_POOL, pool2]
@@ -194,7 +195,7 @@ class TestPoolRouteValidation:
 
 class TestPoolRouteEdgeCases:
 
-    @patch("app.api.routes.pooling.create_auto_pools")
+    @patch("app.routes.pooling.create_auto_pools")
     def test_no_pools_created_returns_400(self, mock_pools):
         mock_pools.return_value = []
 
@@ -202,8 +203,8 @@ class TestPoolRouteEdgeCases:
         assert response.status_code == 400
         assert "No valid pools" in response.json()["detail"]
 
-    @patch("app.api.routes.pooling.create_auto_pools")
-    @patch("app.api.routes.pooling.get_mandi_predictions")
+    @patch("app.routes.pooling.create_auto_pools")
+    @patch("app.routes.pooling.get_mandi_predictions")
     def test_empty_mandi_data_returns_error_in_pool(self, mock_mandi, mock_pools):
         """
         When mandi prediction returns no data for a crop,
@@ -219,16 +220,16 @@ class TestPoolRouteEdgeCases:
         assert response.status_code == 200
         assert "error" in data["pools"][0]
 
-    @patch("app.api.routes.pooling.create_auto_pools")
+    @patch("app.routes.pooling.create_auto_pools")
     def test_unexpected_exception_returns_500(self, mock_pools):
         mock_pools.side_effect = RuntimeError("Unexpected crash")
 
         response = client.post("/pool/", json={"farmers": WHEAT_FARMERS_CLOSE})
         assert response.status_code == 500
 
-    @patch("app.api.routes.pooling.create_auto_pools")
-    @patch("app.api.routes.pooling.optimize_pool")
-    @patch("app.api.routes.pooling.get_mandi_predictions")
+    @patch("app.routes.pooling.create_auto_pools")
+    @patch("app.routes.pooling.optimize_pool")
+    @patch("app.routes.pooling.get_mandi_predictions")
     def test_single_farmer_still_processed(self, mock_mandi, mock_optimize, mock_pools):
         single_farmer_pool = {**MOCK_POOL, "farmers": [WHEAT_FARMERS_CLOSE[0]], "total_quantity": 100}
         mock_pools.return_value    = [single_farmer_pool]

@@ -55,10 +55,23 @@ class Settings(BaseSettings):
     SARVAM_API_KEY: Optional[str] = None
 
     # ------------------------------------------------------------------
+    # OpenCage Geocoding API
+    # ------------------------------------------------------------------
+    OPENCAGE_API_KEY: str = "330bfd9138a143ffb0f2077d6cf8f1d3"
+
+    # ------------------------------------------------------------------
+    # ML Models Directory
+    # ------------------------------------------------------------------
+    MODEL_DIR: Optional[str] = None
+
+    # ------------------------------------------------------------------
     # App settings
     # ------------------------------------------------------------------
     APP_ENV: str = "development"   # "development" | "production"
     APP_PORT: int = 8000
+    API_TITLE: str = "FasalNirnay API"
+    API_VERSION: str = "1.0.0"
+    API_DESCRIPTION: str = "Backend API for FasalNirnay — AI-powered agricultural advisory & virtual pooling platform."
 
     class Config:
         # Automatically reads from a .env file in the project root

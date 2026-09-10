@@ -131,9 +131,10 @@ def compute_net_price(predicted_price: float,
     effective      = predicted_price * multiplier
     t_cost         = transport_cost(distance, quantity)
     net            = effective - t_cost
-    num_trucks     = math.ceil(quantity / TRUCK_CAPACITY_QUINTALS)
+    num_trucks     = math.ceil(quantity / TRUCK_CAPACITY_QUINTALS) if quantity > 0 else 0
 
     return {
+        "price":             round(predicted_price, 2),
         "predicted_price":   round(predicted_price, 2),
         "grade":             grade,
         "grade_multiplier":  multiplier,
@@ -154,30 +155,37 @@ def optimize_pool(pool: Dict, mandi_data: List[Dict]) -> Dict:
     Find the most profitable mandi for a given pool.
 
     `mandi_data` must come from get_mandi_predictions() and contain:
-        predicted_price, grade, grade_confidence  per mandi.
+        predicted_price (or price), grade, grade_confidence per mandi.
 
     The optimizer picks the mandi with the highest net_price where:
         net_price = (predicted_price × grade_multiplier) − transport_cost/q
     """
-    centroid = pool.get("centroid")
-    if centroid is None:
+    if not mandi_data:
+        return {"error": "No valid mandi data provided"}
+
+    centroid_raw = pool.get("centroid")
+    if centroid_raw is None:
         return {"error": "Pool is missing centroid — cannot compute distances"}
 
-    print(f"\n{'='*56}")
-    print(f"Pool      : {pool['pool_id']}  |  crop: {pool['crop']}")
-    print(f"Quantity  : {pool['total_quantity']} quintals  "
-          f"|  farmers: {len(pool['farmers'])}")
-    print(f"Centroid  : lat={centroid[0]:.4f}, lon={centroid[1]:.4f}")
-    print(f"{'='*56}")
+    if isinstance(centroid_raw, dict):
+        centroid = (float(centroid_raw.get("lat", 0)), float(centroid_raw.get("lon", 0)))
+    else:
+        centroid = (float(centroid_raw[0]), float(centroid_raw[1]))
+
+    pool_id = pool.get("pool_id", "UNKNOWN")
+    crop = pool.get("crop", "unknown")
+    total_quantity = float(pool.get("total_quantity", 0))
+    farmers = pool.get("farmers", [])
 
     best_option: Optional[Dict] = None
     best_net = -float("inf")
 
     for mandi in mandi_data:
-        mandi_name       = mandi["mandi"]
-        predicted_price  = mandi["predicted_price"]
-        grade            = mandi.get("grade", "FAQ")
-        grade_confidence = mandi.get("grade_confidence", 1.0)
+        mandi_name = mandi.get("mandi", "Unknown Mandi")
+        raw_price = mandi.get("predicted_price") if "predicted_price" in mandi else mandi.get("price", 0.0)
+        predicted_price = float(raw_price)
+        grade = mandi.get("grade", "FAQ")
+        grade_confidence = float(mandi.get("grade_confidence", 1.0))
 
         distance = get_distance_to_mandi(centroid, mandi_name)
 
@@ -186,20 +194,7 @@ def optimize_pool(pool: Dict, mandi_data: List[Dict]) -> Dict:
             grade            = grade,
             grade_confidence = grade_confidence,
             distance         = distance,
-            quantity         = pool["total_quantity"],
-        )
-
-        print(
-            f"\n  Mandi          : {mandi_name}  ({mandi.get('state', '')})"
-            f"\n  Predicted price: ₹{predicted_price}/q"
-            f"\n  Grade          : {grade} (conf: {grade_confidence*100:.1f}%)"
-            f"\n  Grade mult     : ×{breakdown['grade_multiplier']}"
-            f"\n  Effective price: ₹{breakdown['effective_price']}/q"
-            f"\n  Distance       : {breakdown['distance_km']} km"
-            f"\n  Trucks needed  : {breakdown['trucks_needed']}"
-            f"\n  Transport cost : ₹{breakdown['transport_cost']}/q"
-            f"\n  ─────────────────────────────────"
-            f"\n  Net price      : ₹{breakdown['net_price']}/q"
+            quantity         = total_quantity,
         )
 
         if breakdown["net_price"] > best_net:
@@ -209,16 +204,15 @@ def optimize_pool(pool: Dict, mandi_data: List[Dict]) -> Dict:
     if best_option is None:
         return {"error": "No valid mandi found"}
 
-    print(f"\n  ✅ Best: {best_option['mandi']} @ ₹{best_option['net_price']}/q net")
-
-    total_earnings = round(best_option["net_price"] * pool["total_quantity"], 2)
+    total_earnings = round(best_option["net_price"] * total_quantity, 2)
 
     return {
-        "pool_id":         pool["pool_id"],
-        "crop":            pool["crop"],
-        "total_quantity":  pool["total_quantity"],
-        "num_farmers":     len(pool["farmers"]),
+        "pool_id":         pool_id,
+        "crop":            crop,
+        "total_quantity":  total_quantity,
+        "num_farmers":     len(farmers),
         "centroid":        {"lat": centroid[0], "lon": centroid[1]},
         "recommendation":  best_option,
-        "total_earnings":  total_earnings,    # net_price × total_quantity
+        "total_earnings":  total_earnings,
     }
+

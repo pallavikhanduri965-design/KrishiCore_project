@@ -8,25 +8,26 @@ and registers all route modules. Keep this file minimal.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import weather, news, chat, speech
+from app.core.config import settings
+from app.routes import weather, news, chat, speech, pooling
 
 # ------------------------------------------------------------------------------
 # Create the FastAPI application instance
 # ------------------------------------------------------------------------------
 app = FastAPI(
-    title="FasalNirnay API",
-    description="Backend API for FasalNirnay — AI-powered agricultural advisory platform.",
-    version="1.0.0",
+    title=getattr(settings, "API_TITLE", "FasalNirnay API"),
+    description=getattr(settings, "API_DESCRIPTION", "Backend API for FasalNirnay — AI-powered agricultural advisory & virtual pooling platform."),
+    version=getattr(settings, "API_VERSION", "1.0.0"),
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
 # ------------------------------------------------------------------------------
 # CORS Middleware
-# Allows the frontend (React/Vue/any browser app) to talk to this backend.
-# In production, replace ["*"] with your actual frontend domain.
 # ------------------------------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],        # TODO: restrict this in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -40,6 +41,7 @@ app.include_router(weather.router, prefix="/weather", tags=["Weather"])
 app.include_router(news.router,    prefix="/news",    tags=["News"])
 app.include_router(chat.router,    prefix="/chat",    tags=["Chat"])
 app.include_router(speech.router,  prefix="/speech",  tags=["Speech"])
+app.include_router(pooling.router)
 
 
 # ------------------------------------------------------------------------------
@@ -51,6 +53,7 @@ def read_root():
     return {
         "message": "Welcome to FasalNirnay API 🌾",
         "status": "running",
+        "version": getattr(settings, "API_VERSION", "1.0.0"),
         "docs": "/docs",
     }
 
@@ -61,4 +64,9 @@ def read_root():
 @app.get("/health", tags=["Root"])
 def health_check():
     """Health check endpoint."""
-    return {"status": "healthy"}
+    return {
+        "status": "healthy",
+        "environment": getattr(settings, "APP_ENV", "development"),
+        "version": getattr(settings, "API_VERSION", "1.0.0"),
+    }
+

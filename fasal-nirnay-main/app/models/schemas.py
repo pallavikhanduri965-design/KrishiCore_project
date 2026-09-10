@@ -148,3 +148,83 @@ class TTSResponse(BaseModel):
     format:       str = Field(..., description="Audio format: 'mp3' or 'wav'")
     language:     str = Field(..., description="Language code used")
     source:       str = Field(..., description="Provider used: 'google', 'bhashini', or 'mock'")
+
+
+# ==============================================================================
+# VIRTUAL POOLING SCHEMAS
+# ==============================================================================
+
+class Farmer(BaseModel):
+    """A farmer entry submitted for virtual pooling."""
+    farmer_id: int   = Field(..., description="Unique identifier for the farmer")
+    quantity:  float = Field(..., gt=0, description="Crop produce quantity in quintals")
+    location:  str   = Field(..., min_length=1, description="Village / City / District name")
+    crop:      str   = Field(..., min_length=1, description="Crop name, e.g. 'wheat', 'mustard'")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "farmer_id": 1,
+                "quantity": 50.0,
+                "location": "Jhajjar",
+                "crop": "wheat",
+            }
+        }
+
+
+class PoolRequest(BaseModel):
+    """Request payload for POST /pool/."""
+    farmers:       List[Farmer]              = Field(..., min_items=1, description="List of farmers to cluster and pool")
+    price_history: Optional[List[float]]     = Field(None, description="Optional historical daily prices (₹/q) for LSTM forecasting")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "farmers": [
+                    {"farmer_id": 1, "quantity": 50.0, "location": "Jhajjar", "crop": "wheat"},
+                    {"farmer_id": 2, "quantity": 80.0, "location": "Bahadurgarh", "crop": "wheat"},
+                ],
+                "price_history": [2150.0, 2180.0, 2200.0],
+            }
+        }
+
+
+class Centroid(BaseModel):
+    """Geographic centroid coordinate."""
+    lat: float = Field(..., description="Latitude coordinate")
+    lon: float = Field(..., description="Longitude coordinate")
+
+
+class PoolRecommendation(BaseModel):
+    """Best optimized mandi recommendation for a pool."""
+    mandi:            str   = Field(..., description="Recommended Mandi name")
+    price:            float = Field(..., description="Base predicted price ₹/quintal")
+    predicted_price:  float = Field(..., description="Base predicted price ₹/quintal")
+    grade:            str   = Field(..., description="Predicted quality grade (e.g. FAQ, Best)")
+    grade_multiplier: float = Field(..., description="Quality price multiplier")
+    grade_confidence: float = Field(..., description="Confidence score for grade prediction")
+    effective_price:  float = Field(..., description="Price after quality adjustment ₹/quintal")
+    distance_km:      float = Field(..., description="Haversine distance from pool centroid to mandi in km")
+    trucks_needed:    int   = Field(..., description="Calculated number of 200q capacity trucks")
+    transport_cost:   float = Field(..., description="Logistics cost per quintal ₹/quintal")
+    net_price:        float = Field(..., description="Net payout to farmers per quintal ₹/quintal")
+
+
+class PoolResult(BaseModel):
+    """Result breakdown for an individual virtual pool."""
+    pool_id:        str                         = Field(..., description="Unique pool ID")
+    crop:           str                         = Field(..., description="Crop pooled")
+    total_quantity: Optional[float]             = Field(None, description="Combined quantity across pooled farmers")
+    num_farmers:    Optional[int]               = Field(None, description="Number of farmers in this cluster pool")
+    centroid:       Optional[Centroid]          = Field(None, description="Geographic centroid coordinates")
+    recommendation: Optional[PoolRecommendation]= Field(None, description="Recommended mandi details")
+    total_earnings: Optional[float]             = Field(None, description="Estimated total earnings for the pool in ₹")
+    error:          Optional[str]               = Field(None, description="Error message if optimization failed for pool")
+
+
+class PoolResponse(BaseModel):
+    """Response payload for POST /pool/."""
+    status:      str              = Field("success", description="Response status")
+    total_pools: int              = Field(..., description="Total number of pools formed")
+    pools:       List[PoolResult] = Field(..., description="List of pooled and optimized clusters")
+

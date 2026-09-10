@@ -1,34 +1,74 @@
 import requests
 import math
+from typing import Tuple, List, Dict
+from app.core.config import settings
 
-API_KEY = "330bfd9138a143ffb0f2077d6cf8f1d3"
+location_cache: Dict[str, Tuple[float, float]] = {}
 
-location_cache = {}
+# Fallback coordinates for common agricultural regions in case network/quota fails
+FALLBACK_COORDINATES: Dict[str, Tuple[float, float]] = {
+    "delhi": (28.7041, 77.1025),
+    "jhajjar": (28.6067, 76.6565),
+    "rohtak": (28.8955, 76.6066),
+    "bahadurgarh": (28.6924, 76.9240),
+    "karnal": (29.6857, 76.9905),
+    "sonipat": (28.9929, 77.0151),
+    "hisar": (29.1492, 75.7217),
+    "jaipur": (26.9124, 75.7873),
+    "alwar": (27.5530, 76.6346),
+    "pune": (18.5204, 73.8567),
+    "nashik": (19.9975, 73.7898),
+}
 
 
-def get_coordinates(place: str):
+def get_coordinates(place: str) -> Tuple[float, float]:
+    """
+    Get geographic coordinates (lat, lon) for a location name.
+    Uses in-memory cache, OpenCage Geocoding API, and fallback defaults.
+    """
+    if not place:
+        raise ValueError("Location string cannot be empty")
+
+    normalized = place.strip().lower()
     if place in location_cache:
         return location_cache[place]
+    if normalized in location_cache:
+        return location_cache[normalized]
 
+    api_key = getattr(settings, "OPENCAGE_API_KEY", "330bfd9138a143ffb0f2077d6cf8f1d3")
     url = "https://api.opencagedata.com/geocode/v1/json"
 
     params = {
         "q": place,
-        "key": API_KEY,
+        "key": api_key,
         "countrycode": "in",
-        "limit": 1
+        "limit": 1,
     }
 
-    response = requests.get(url, params=params).json()
+    try:
+        response = requests.get(url, params=params, timeout=10.0)
+        data = response.json()
+        if data.get("results"):
+            lat = float(data["results"][0]["geometry"]["lat"])
+            lon = float(data["results"][0]["geometry"]["lng"])
+            location_cache[place] = (lat, lon)
+            location_cache[normalized] = (lat, lon)
+            return lat, lon
+    except Exception as e:
+        # If network fails, try known fallback coordinates before raising
+        if normalized in FALLBACK_COORDINATES:
+            lat, lon = FALLBACK_COORDINATES[normalized]
+            location_cache[place] = (lat, lon)
+            return lat, lon
+        raise ValueError(f"Location not found: {place}") from e
 
-    if response["results"]:
-        lat = response["results"][0]["geometry"]["lat"]
-        lon = response["results"][0]["geometry"]["lng"]
-
+    # If results list is empty
+    if normalized in FALLBACK_COORDINATES:
+        lat, lon = FALLBACK_COORDINATES[normalized]
         location_cache[place] = (lat, lon)
         return lat, lon
-    else:
-        raise ValueError(f"Location not found: {place}")
+
+    raise ValueError(f"Location not found: {place}")
 
 
 def haversine(lat1, lon1, lat2, lon2):
