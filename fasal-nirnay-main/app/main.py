@@ -5,8 +5,11 @@ This file creates the FastAPI app, adds middleware,
 and registers all route modules. Keep this file minimal.
 """
 
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from app.core.config import settings
 from app.routes import weather, news, chat, speech, pooling
@@ -45,21 +48,7 @@ app.include_router(pooling.router)
 
 
 # ------------------------------------------------------------------------------
-# Root Endpoint — quick sanity check
-# ------------------------------------------------------------------------------
-@app.get("/", tags=["Root"])
-def read_root():
-    """Welcome endpoint. Confirms the API is running."""
-    return {
-        "message": "Welcome to FasalNirnay API 🌾",
-        "status": "running",
-        "version": getattr(settings, "API_VERSION", "1.0.0"),
-        "docs": "/docs",
-    }
-
-
-# ------------------------------------------------------------------------------
-# Health Endpoint — used by deployment platforms to check if the service is up
+# Health Endpoint
 # ------------------------------------------------------------------------------
 @app.get("/health", tags=["Root"])
 def health_check():
@@ -69,4 +58,33 @@ def health_check():
         "environment": getattr(settings, "APP_ENV", "development"),
         "version": getattr(settings, "API_VERSION", "1.0.0"),
     }
+
+
+# ------------------------------------------------------------------------------
+# Mount Frontend Static Assets & Web App UI
+# ------------------------------------------------------------------------------
+frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
+
+if os.path.exists(frontend_dir):
+    app.mount("/css", StaticFiles(directory=os.path.join(frontend_dir, "css")), name="css")
+    app.mount("/js", StaticFiles(directory=os.path.join(frontend_dir, "js")), name="js")
+    assets_path = os.path.join(frontend_dir, "assets")
+    if os.path.exists(assets_path):
+        app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
+
+    @app.get("/", tags=["Frontend"])
+    async def serve_spa():
+        """Serves the FasalNirnay AI Frontend Web Application."""
+        return FileResponse(os.path.join(frontend_dir, "index.html"))
+else:
+    @app.get("/", tags=["Root"])
+    def read_root():
+        """Welcome endpoint fallback."""
+        return {
+            "message": "Welcome to FasalNirnay API 🌾",
+            "status": "running",
+            "version": getattr(settings, "API_VERSION", "1.0.0"),
+            "docs": "/docs",
+        }
+
 

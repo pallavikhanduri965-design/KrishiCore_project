@@ -1,0 +1,101 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>FasalNirnay AI — Agricultural Intelligence</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#15803d',
+                        'primary-dark': '#166534',
+                        gold: '#d97706',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="bg-slate-100 flex items-center justify-center min-h-screen">
+
+    <!-- Mobile Frame App Shell -->
+    <div class="app-container shadow-2xl relative">
+        
+        <!-- Mobile Status Bar Mockup -->
+        <div class="bg-white px-6 pt-2 pb-1 flex justify-between items-center text-[11px] font-semibold text-slate-800 select-none border-b border-slate-50 flex-shrink-0">
+            <span>9:41</span>
+            <div class="flex items-center space-x-1.5">
+                <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L12 22l7.03-4.39C20.26 16.07 21 14.12 21 12c0-4.97-4.03-9-9-9z"/></svg>
+                <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98C20.93 5.9 16.69 4 12 4z"/></svg>
+                <svg class="w-4 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M17 4h-3V2h-4v2H7v18h10V4z"/></svg>
+            </div>
+        </div>
+
+        <!-- Dynamic Screen Injection Container -->
+        <div id="app-root" class="flex-1 flex flex-col overflow-hidden relative">
+            <!-- Rendered by components.js & app.js -->
+        </div>
+
+        <!-- Custom Virtual Pooling Modal -->
+        <div id="custom-pool-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+            <div class="bg-white rounded-3xl p-5 w-full max-w-sm shadow-2xl space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-bold text-slate-800 text-sm">Calculate Custom Pool</h3>
+                    <button onclick="App.closeCustomPoolModal()" class="text-slate-400 hover:text-slate-600">✕</button>
+                </div>
+
+                <div class="space-y-3 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Crop</label>
+                        <select id="pool-calc-crop" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                            <option value="wheat">Wheat (गेहूं)</option>
+                            <option value="cotton">Cotton (कपास)</option>
+                            <option value="mustard">Mustard (सरसों)</option>
+                            <option value="rice">Rice (चावल)</option>
+                            <option value="soybean">Soybean (सोयाबीन)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Your Produce Quantity (Quintals)</label>
+                        <input id="pool-calc-qty" type="number" value="80" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
+                    </div>
+
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Pickup Village / City</label>
+                        <input id="pool-calc-loc" type="text" value="Jhajjar" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
+                    </div>
+
+                    <button onclick="App.runPoolOptimization()" class="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl shadow">
+                        Optimize Mandi Net Profit
+                    </button>
+
+                    <div id="pool-calc-result" class="hidden"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/i18n.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/voice.js"></script>
+    <script src="js/components_onboarding.js"></script>
+    <script src="js/components_dashboard.js"></script>
+    <script src="js/components_features.js"></script>
+    <script src="js/components.js"></script>
+    <script src="js/app.js"></script>
+
+</body>
+</html>
